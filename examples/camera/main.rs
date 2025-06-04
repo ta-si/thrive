@@ -1,21 +1,14 @@
-// src/main.rs
-mod camera;
 
-mod terrain;
-use camera::{FreeFlightCamera, FreeFlightCameraPlugin};
+use thrive::camera::{FreeFlightCamera, FreeFlightCameraPlugin};
 
 use bevy::{
     prelude::*,
     pbr::Atmosphere
 };
 
-use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
-
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(EguiPlugin { enable_multipass_for_primary_context: true })
-        .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(FreeFlightCameraPlugin)
         .add_systems(Startup, setup)
         .run();
@@ -26,7 +19,6 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // Camera
     commands.spawn((
         Name::new("Camera"),
         Camera3d::default(),
