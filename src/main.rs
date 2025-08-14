@@ -1,21 +1,25 @@
 // src/main.rs
 mod camera;
-
-mod terrain;
 use camera::{FreeFlightCamera, FreeFlightCameraPlugin};
 
+mod terrain;
+use terrain::TerrainPlugin;
+use crate::terrain::systems::TileLoader;
+
 use bevy::{
-    prelude::*,
-    pbr::Atmosphere
+    pbr::Atmosphere, prelude::*, window::PresentMode
 };
-
-use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
-
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugins(EguiPlugin { enable_multipass_for_primary_context: true })
-        .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Bevy Terrain Part 1".into(),
+                present_mode: PresentMode::AutoVsync,
+                ..default()
+            }),
+            ..default()
+        }))
+        .add_plugins(TerrainPlugin)
         .add_plugins(FreeFlightCameraPlugin)
         .add_systems(Startup, setup)
         .run();
@@ -31,12 +35,7 @@ fn setup(
         Name::new("Camera"),
         Camera3d::default(),
         Camera{hdr: true, ..default()},
-        Transform {
-            translation: Vec3::new(0.0, 3.0, 8.0),
-            rotation: Quat::from_euler(EulerRot::ZYX, 0.0, 0.0, 0.0)
-                * Quat::from_rotation_arc(Vec3::Y, (Vec3::ZERO - Vec3::new(0.0, 3.0, 8.0)).normalize()),
-            ..default()
-        },
+        Transform::from_xyz(40.0, 45.0, 80.0).looking_at(Vec3::new(16.0, 0.0, 16.0), Vec3::Y),
         Atmosphere::EARTH,
         DistanceFog {
             falloff: FogFalloff::from_visibility_colors(
@@ -46,7 +45,8 @@ fn setup(
             ),
             ..default()
         },
-        FreeFlightCamera::default()
+        FreeFlightCamera::default(),
+        TileLoader{radius_tiles: 6}
     ));
 
     // Directional Light
@@ -65,22 +65,6 @@ fn setup(
             ),
             ..default()
         },
-        Visibility::default(),
-    ));
-
-    // Ground Plane
-    commands.spawn((
-        Name::new("Ground Plane"),
-        Mesh3d(meshes.add(Mesh::from(Plane3d::new(
-            Vec3::Y,
-            Vec2::new(10000.0, 10000.0),
-        )))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgb(0.25, 0.35, 0.25),
-            perceptual_roughness: 0.6,
-            ..default()
-        })),
-        Transform::from_xyz(0., 0., 0.),
         Visibility::default(),
     ));
 

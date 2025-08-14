@@ -1,0 +1,6 @@
+(
+  name: "Gravel",
+  uv_scale: (x: 2.0, y: 2.0),
+  uv_rotation_deg: 0.0,
+  super_sample: false,
+)

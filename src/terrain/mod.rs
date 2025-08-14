@@ -1,3 +1,7 @@
-pub mod terrain_plugin;
+pub mod material;
+pub mod flatmesh;
+pub mod meshgen;
+pub mod systems;
+pub mod plugin;
 
-pub use terrain_plugin::{TerrainManager, TerrainSpawner, TerrainTile, TerrainPlugin};
+pub use plugin::TerrainPlugin;
