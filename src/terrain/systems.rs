@@ -1,7 +1,5 @@
 use bevy::prelude::*;
-use bevy::pbr::{MaterialPipeline, MeshMaterial3d};
 use bevy::tasks::{AsyncComputeTaskPool, Task};
-use bevy::tasks::futures::check_ready;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::render::render_asset::RenderAssetUsages;
 use std::collections::{HashMap, HashSet};
@@ -187,7 +185,7 @@ pub fn collect_finished_tasks_system(
     time: Res<Time>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<TerrainMaterial>>,
+    mut materials: ResMut<Assets<TerrainMaterial>>,  // <- material type
     shared: Res<SharedMeshes>,
     mut state: ResMut<TerrainState>,
     cfg: Res<TerrainConfig>,
@@ -198,7 +196,6 @@ pub fn collect_finished_tasks_system(
     for (e, mut t) in q_tasks.iter_mut() {
         if let Some(result) = bevy::tasks::futures::check_ready(&mut t.task) {
             let size_u = cfg.tile_resolution as u32;
-
             let height_img = Image::new(
                 Extent3d { width: size_u, height: size_u, depth_or_array_layers: 1 },
                 TextureDimension::D2,
@@ -216,38 +213,37 @@ pub fn collect_finished_tasks_system(
             let height_h = images.add(height_img);
             let normal_h = images.add(normal_img);
 
+            // per-tile params (linear color)
             let c = color_for_coord(result.coord).to_linear();
             let tile_color = Vec4::new(c.red, c.green, c.blue, c.alpha);
-
             let params = TileParams {
                 tile_size: cfg.tile_size,
-                height_scale: 1.0,                      // try 0.0 first if you want purely flat debug
+                height_scale: 1.0,
                 texels_per_side: cfg.tile_resolution as u32,
                 _pad: 0,
                 tile_color,
             };
 
+            // 🟣 build the *new* material with samplers + textures
             let mat = materials.add(TerrainMaterial {
-                params,
-                height_tex: height_h,
-                normal_tex: normal_h,
+                params, 
+                height_tex: height_h, 
+                normal_tex: normal_h
             });
 
+            // spawn (unchanged, except the component type)
             commands.entity(e)
                 .remove::<TileBuildTask>()
                 .insert((
                     Tile { coord: result.coord },
                     Mesh3d(shared.flat.clone()),
-                    MeshMaterial3d(mat),
+                    bevy::pbr::MeshMaterial3d(mat),
                     Transform::from_translation(Vec3::new(t.origin.x, 0.0, t.origin.y)),
                     GlobalTransform::default(),
                     Visibility::Visible,
                     InheritedVisibility::default(),
+                    Name::new(format!("Tile {:?}", result.coord)),
                 ));
-
-            state.pending.remove(&result.coord);
-            state.tiles.insert(result.coord, e);
-            state.last_touched.insert(result.coord, now);
         }
     }
 }
@@ -267,4 +263,9 @@ pub fn garbage_collect_tiles_system(
         state.tiles.remove(&c);
         commands.entity(e).despawn();
     }
+}
+
+pub fn log_registration(world: &mut World) {
+    let has_assets = world.contains_resource::<Assets<TerrainMaterial>>();
+    info!("TerrainMaterial registered? {}", if has_assets { "YES" } else { "NO" });
 }
